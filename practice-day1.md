@@ -349,3 +349,217 @@ Error from server (Forbidden): You may not request a new project via this API.
 [student@workstation DO280-apps]$ 
 </pre>
 
+
+Task 4 :
+
+
+As the developer user, use a deployment to create an application named mysql in the review-troubleshoot project. Use the image available at registry.redhat.io/rhel8/mysql-80:1-139. This application provides a shared database service for other project applications.
+
+Create a generic secret named mysql using password as the key and redhat as the value.
+
+Set the MYSQL_ROOT_ environment variables from the values in the mysql secret.
+
+Configure the mysql database application to mount a persistent volume claim (PVC) to the /var/lib/mysql/data directory within the pod. The PVC must be 2 GB in size and must only request the ReadWriteOnce access mode.
+
+
+
+<pre>[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ clear
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[student@workstation DO280-apps]$ oc whoami
+developer
+[student@workstation DO280-apps]$ oc new-app --name mysql \
+&gt;    --docker-image registry.redhat.io/rhel8/mysql-80:1-139
+--&gt; Found container image a2a7718 (16 months old) from registry.redhat.io for &quot;registry.redhat.io/rhel8/mysql-80:1-139&quot;
+
+    MySQL 8.0 
+    --------- 
+    MySQL is a multi-user, multi-threaded SQL database server. The container image provides a containerized packaging of the MySQL mysqld daemon and client application. The mysqld server daemon accepts connections from clients and provides access to content from MySQL databases on behalf of the clients.
+
+    Tags: database, mysql, mysql80, mysql-80
+
+    * An image stream tag will be created as &quot;mysql:1-139&quot; that will track this image
+
+--&gt; Creating resources ...
+    imagestream.image.openshift.io &quot;mysql&quot; created
+    deployment.apps &quot;mysql&quot; created
+    service &quot;mysql&quot; created
+--&gt; Success
+    Application is not exposed. You can expose services to the outside world by executing one or more of the commands below:
+     &apos;oc expose service/mysql&apos; 
+    Run &apos;oc status&apos; to view your app.
+[student@workstation DO280-apps]$ oc status
+In project review-troubleshoot on server https://api.ocp4.example.com:6443
+
+http://hello-world.apps.ocp4.example.com to pod port 8080-tcp (svc/hello-world-nginx)
+  deployment/hello-world-nginx deploys istag/hello-world-nginx:latest &lt;-
+    bc/hello-world-nginx docker builds https://github.com/Mostarijullah/DO280-apps on istag/ubi8:8.0 
+    deployment #2 running for 44 minutes - 1 pod
+    deployment #1 deployed 46 minutes ago
+
+svc/mysql - 172.30.236.110:3306
+  deployment/mysql deploys istag/mysql:1-139 
+    deployment #2 running for 10 seconds - 0/1 pods
+    deployment #1 deployed 12 seconds ago - 0/1 pods growing to 1
+
+
+2 infos identified, use &apos;oc status --suggest&apos; to see details.
+[student@workstation DO280-apps]$ oc get pods
+NAME                                READY   STATUS             RESTARTS   AGE
+hello-world-nginx-1-build           0/1     Completed          0          45m
+hello-world-nginx-d58b5fc8b-csv6n   1/1     Running            0          44m
+mysql-64d9f4d857-4vb9p              0/1     CrashLoopBackOff   1          18s
+[student@workstation DO280-apps]$  oc create secret generic mysql \
+&gt; --from-literal password=redhat
+secret/mysql created
+[student@workstation DO280-apps]$ oc set env deployment mysql \
+&gt;     --prefix MYSQL_ROOT_ --from secret/mysql
+deployment.apps/mysql updated
+[student@workstation DO280-apps]$ oc get pods -l deployment=mysql
+NAME                    READY   STATUS    RESTARTS   AGE
+mysql-fbf67ff96-q8pzj   1/1     Running   0          18s
+[student@workstation DO280-apps]$ oc set volumes deployment/mysql --name mysql-storage \
+&gt;    --add --type pvc --claim-size 2Gi --claim-mode rwo \
+&gt;    --mount-path /var/lib/mysql/data
+deployment.apps/mysql volume updated
+[student@workstation DO280-apps]$ oc get pods -l deployment=mysql
+NAME                     READY   STATUS    RESTARTS   AGE
+mysql-66c6b4976d-dbbwk   1/1     Running   0          12s
+[student@workstation DO280-apps]$ oc describe pod mysql-66c6b4976d-dbbwk 
+Name:         mysql-66c6b4976d-dbbwk
+Namespace:    review-troubleshoot
+Priority:     0
+Node:         master01/192.168.50.10
+Start Time:   Sun, 23 Oct 2022 10:04:08 -0400
+Labels:       deployment=mysql
+              pod-template-hash=66c6b4976d
+Annotations:  k8s.v1.cni.cncf.io/network-status:
+                [{
+                    &quot;name&quot;: &quot;&quot;,
+                    &quot;interface&quot;: &quot;eth0&quot;,
+                    &quot;ips&quot;: [
+                        &quot;10.8.0.20&quot;
+                    ],
+                    &quot;default&quot;: true,
+                    &quot;dns&quot;: {}
+                }]
+              k8s.v1.cni.cncf.io/networks-status:
+                [{
+                    &quot;name&quot;: &quot;&quot;,
+                    &quot;interface&quot;: &quot;eth0&quot;,
+                    &quot;ips&quot;: [
+                        &quot;10.8.0.20&quot;
+                    ],
+                    &quot;default&quot;: true,
+                    &quot;dns&quot;: {}
+                }]
+              openshift.io/generated-by: OpenShiftNewApp
+              openshift.io/scc: restricted
+Status:       Running
+IP:           10.8.0.20
+IPs:
+  IP:           10.8.0.20
+Controlled By:  ReplicaSet/mysql-66c6b4976d
+Containers:
+  mysql:
+    Container ID:   cri-o://1ecc1117da5fb3d787914934ec35bfd8b2d69b0fc6c0f02d3c57face77a3fc5f
+    Image:          registry.redhat.io/rhel8/mysql-80@sha256:1c65c90a5ffc40d0454d27e6c8a13b7a746a08ea151ed24edce96c61aeb28801
+    Image ID:       registry.redhat.io/rhel8/mysql-80@sha256:1c65c90a5ffc40d0454d27e6c8a13b7a746a08ea151ed24edce96c61aeb28801
+    Port:           3306/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sun, 23 Oct 2022 10:04:10 -0400
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      MYSQL_ROOT_PASSWORD:  &lt;set to the key &apos;password&apos; in secret &apos;mysql&apos;&gt;  Optional: false
+    Mounts:
+      /var/lib/mysql/data from mysql-storage (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-g99n5 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  mysql-storage:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  pvc-qwgrj
+    ReadOnly:   false
+  default-token-g99n5:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-g99n5
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  &lt;none&gt;
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason            Age   From               Message
+  ----     ------            ----  ----               -------
+  Warning  FailedScheduling  30s   default-scheduler  0/3 nodes are available: 3 pod has unbound immediate PersistentVolumeClaims.
+  Warning  FailedScheduling  30s   default-scheduler  0/3 nodes are available: 3 pod has unbound immediate PersistentVolumeClaims.
+  Normal   Scheduled         28s   default-scheduler  Successfully assigned review-troubleshoot/mysql-66c6b4976d-dbbwk to master01
+  Normal   AddedInterface    26s   multus             Add eth0 [10.8.0.20/23]
+  Normal   Pulled            26s   kubelet            Container image &quot;registry.redhat.io/rhel8/mysql-80@sha256:1c65c90a5ffc40d0454d27e6c8a13b7a746a08ea151ed24edce96c61aeb28801&quot; already present on machine
+  Normal   Created           26s   kubelet            Created container mysql
+  Normal   Started           26s   kubelet            Started container mysql
+[student@workstation DO280-apps]$ oc get pv
+Error from server (Forbidden): persistentvolumes is forbidden: User &quot;developer&quot; cannot list resource &quot;persistentvolumes&quot; in API group &quot;&quot; at the cluster scope
+[student@workstation DO280-apps]$ oc get pvc
+NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+pvc-qwgrj   Bound    pvc-f1fb064f-6d75-4d8a-813a-fe9f1797b9a3   2Gi        RWO            nfs-storage    93s
+[student@workstation DO280-apps]$ oc exec mysql-66c6b4976d-dbbwk -- \
+&gt;    df -h /var/lib/mysql/data
+Filesystem                                                                                           Size  Used Avail Use% Mounted on
+192.168.50.254:/exports-ocp4/review-troubleshoot-pvc-qwgrj-pvc-f1fb064f-6d75-4d8a-813a-fe9f1797b9a3   40G  931M   40G   3% /var/lib/mysql/data
+[student@workstation DO280-apps]$ 
+</pre>
+
+
+Task 5 :
+
+As the developer user, use a deployment to create an application named wordpress. Create the application in the review-troubleshoot project. Use the image available at quay.io/redhattraining/wordpress:5.7-php7.4-apache.
+
+The Wordpress application requires that you set several environment variables. The required environment variables are: WORDPRESS_DB_HOST with a value of mysql, WORDPRESS_DB_NAME to have a value of wordpress, WORDPRESS_USER with a value of wpuser, WORDPRESS_PASSWORD with a value of wppass, WORDPRESS_TITLE to have a value of review-troubleshoot, WORDPRESS_URL with a value of wordpress.${RHT_OCP4_WILDCARD_DOMAIN} and WORDPRESS_EMAIL with a value of student@redhat.com.
+
+Set the WORDPRESS_DB_* environment variables to retrieve their values from the mysql secret.
+
+The wordpress application requires the anyuid security context constraint. Create a service account named wordpress-sa, and then assign the anyuid security context constraint to it. Configure the wordpress deployment to use the wordpress-sa service account.
+
+The wordpress application also requires that the database WORDPRESS_DB_NAME exists on the database server. Create an empty database named wordpress.
+
+Create a route for the application using any available hostname in the apps.ocp4.example.com subdomain. If you correctly deploy the application, then an installation wizard displays when you access the application from a browser.
+
+
