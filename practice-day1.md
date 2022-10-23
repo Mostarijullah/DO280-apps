@@ -238,6 +238,18 @@ spec:
         name: local-users
 
 
+<pre>spec:
+  identityProviders:
+  - name: cluster-users
+    mappingMethod: claim
+    type: HTPasswd
+    htpasswd: 
+      fileData: 
+        name: local-users
+
+</pre>
+
+
 
 Task 3 :
 
@@ -367,35 +379,6 @@ Configure the mysql database application to mount a persistent volume claim (PVC
 [student@workstation DO280-apps]$ 
 [student@workstation DO280-apps]$ 
 [student@workstation DO280-apps]$ 
-[student@workstation DO280-apps]$ clear
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 [student@workstation DO280-apps]$ oc whoami
 developer
 [student@workstation DO280-apps]$ oc new-app --name mysql \
