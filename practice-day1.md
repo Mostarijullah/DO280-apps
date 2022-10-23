@@ -106,3 +106,137 @@ route.route.openshift.io/hello-world-nginx   hello-world.apps.ocp4.example.com  
     &lt;h1&gt;<font color="#EF2929"><b>Hello</b></font>, world from nginx!&lt;/h1&gt;
 [student@workstation DO280-apps]$ 
 </pre>
+
+
+
+Task 2 :
+
+Configure the cluster to use an HTPasswd identity provider. The name of the identity provider is cluster-users. The identity provider reads htpasswd credentials stored in the local-users secret.
+
+Ensure that four user accounts exist: admin, leader, developer, and qa-engineer. All user accounts must use redhat as the password.
+
+Add the cluster-admin role to the admin user.
+
+
+<pre> 
+
+[student@workstation DO280-apps]$ 
+
+[student@workstation DO280-apps]$ touch /tmp/cluster-users
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ for user in admin leader developer qa-engineer
+&gt;     do
+&gt;     htpasswd -B -b /tmp/cluster-users ${user} redhat
+&gt;     done
+Adding password for user admin
+Adding password for user leader
+Adding password for user developer
+Adding password for user qa-engineer
+[student@workstation DO280-apps]$ cat /tmp/cluster-users 
+admin:$2y$05$1XKA79Hc2J4pRdljCQvHlOsvOUGBmv3RgCSJakAU6TZM3t/6YXWRa
+leader:$2y$05$5G4kdTjd/LuyRdZl5L/WOe0wmPwgWnTHxfpkC1IEQdLimy4SLx7Vu
+developer:$2y$05$9EB8zQVAO0iuEDcc2qOuBOQnUJ6IdnngGd2H1ZkCUYmTvP3bsE.1q
+qa-engineer:$2y$05$jTPpG7UXzf2.b4xFBfyVoeMV/MVYV3ikWc6R7NSvkkcbjw8srsJPO
+[student@workstation DO280-apps]$ oc create secret generic local-users \
+&gt;     --from-file htpasswd=/tmp/cluster-users -n openshift-config
+secret/local-users created
+[student@workstation DO280-apps]$ oc get oauth cluster -o yaml &gt; /tmp/oauth.yaml
+[student@workstation DO280-apps]$ vi /tmp/oauth.yaml 
+[student@workstation DO280-apps]$ oc replace -f /tmp/oauth.yaml 
+oauth.config.openshift.io/cluster replaced
+[student@workstation DO280-apps]$ oc adm policy add-cluster-role-to-user \
+&gt;     cluster-admin admin
+Warning: User &apos;admin&apos; not found
+clusterrole.rbac.authorization.k8s.io/cluster-admin added: &quot;admin&quot;
+[student@workstation DO280-apps]$ oc login -u admin -p redhat
+Login successful.
+
+You have access to 60 projects, the list has been suppressed. You can list all projects with &apos; projects&apos;
+
+Using project &quot;review-troubleshoot&quot;.
+[student@workstation DO280-apps]$ oc get nd
+error: the server doesn&apos;t have a resource type &quot;nd&quot;
+[student@workstation DO280-apps]$ oc get ns
+NAME                                               STATUS   AGE
+default                                            Active   467d
+kube-node-lease                                    Active   467d
+kube-public                                        Active   467d
+kube-system                                        Active   467d
+nfs-client-provisioner                             Active   467d
+openshift                                          Active   467d
+openshift-apiserver                                Active   467d
+openshift-apiserver-operator                       Active   467d
+openshift-authentication                           Active   467d
+openshift-authentication-operator                  Active   467d
+openshift-cloud-credential-operator                Active   467d
+openshift-cluster-csi-drivers                      Active   467d
+openshift-cluster-machine-approver                 Active   467d
+openshift-cluster-node-tuning-operator             Active   467d
+openshift-cluster-samples-operator                 Active   467d
+openshift-cluster-storage-operator                 Active   467d
+openshift-cluster-version                          Active   467d
+openshift-config                                   Active   467d
+openshift-config-managed                           Active   467d
+openshift-config-operator                          Active   467d
+openshift-console                                  Active   467d
+openshift-console-operator                         Active   467d
+openshift-controller-manager                       Active   467d
+openshift-controller-manager-operator              Active   467d
+openshift-dns                                      Active   467d
+openshift-dns-operator                             Active   467d
+openshift-etcd                                     Active   467d
+openshift-etcd-operator                            Active   467d
+openshift-image-registry                           Active   467d
+openshift-infra                                    Active   467d
+openshift-ingress                                  Active   467d
+openshift-ingress-operator                         Active   467d
+openshift-insights                                 Active   467d
+openshift-kni-infra                                Active   467d
+openshift-kube-apiserver                           Active   467d
+openshift-kube-apiserver-operator                  Active   467d
+openshift-kube-controller-manager                  Active   467d
+openshift-kube-controller-manager-operator         Active   467d
+openshift-kube-scheduler                           Active   467d
+openshift-kube-scheduler-operator                  Active   467d
+openshift-kube-storage-version-migrator            Active   467d
+openshift-kube-storage-version-migrator-operator   Active   467d
+openshift-machine-api                              Active   467d
+openshift-machine-config-operator                  Active   467d
+openshift-marketplace                              Active   467d
+openshift-monitoring                               Active   467d
+openshift-multus                                   Active   467d
+openshift-network-operator                         Active   467d
+openshift-node                                     Active   467d
+openshift-oauth-apiserver                          Active   467d
+openshift-openstack-infra                          Active   467d
+openshift-operator-lifecycle-manager               Active   467d
+openshift-operators                                Active   467d
+openshift-ovirt-infra                              Active   467d
+openshift-sdn                                      Active   467d
+openshift-service-ca                               Active   467d
+openshift-service-ca-operator                      Active   467d
+openshift-user-workload-monitoring                 Active   467d
+openshift-vsphere-infra                            Active   467d
+review-troubleshoot                                Active   25m
+[student@workstation DO280-apps]$ oc get nodes
+NAME       STATUS   ROLES           AGE    VERSION
+master01   Ready    master,worker   467d   v1.19.0+b00ba52
+master02   Ready    master,worker   467d   v1.19.0+b00ba52
+master03   Ready    master,worker   467d   v1.19.0+b00ba52
+[student@workstation DO280-apps]$ 
+</pre>
+
+oauth file -
+
+spec:
+  identityProviders:
+  - name: cluster-users
+    mappingMethod: claim
+    type: HTPasswd
+    htpasswd: 
+      fileData: 
+        name: local-users
+
+
+
+
