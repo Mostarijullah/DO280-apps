@@ -239,4 +239,113 @@ spec:
 
 
 
+Task 3 :
+
+As the admin user, create three user groups: leaders, developers, and qa.
+
+Assign the leader user to the leaders group, the developer user to the developers group, and the qa-engineer user to the qa group.
+
+Assign roles to each group:
+
+Assign the self-provisioner role to the leaders group, which allows members to create projects. For this role to be effective, you must also remove the ability of any authenticated user to create new projects.
+
+Assign the edit role to the developers group for the review-troubleshoot project only, which allows members to create and delete project resources.
+
+Assign the view role to the qa group for the review-troubleshoot project only, which provides members with read access to project resources.
+
+<pre>
+
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ oc whoami --show-console
+https://console-openshift-console.apps.ocp4.example.com
+[student@workstation DO280-apps]$ oc whoami
+admin
+[student@workstation DO280-apps]$ oc project
+Using project &quot;review-troubleshoot&quot; on server &quot;https://api.ocp4.example.com:6443&quot;.
+[student@workstation DO280-apps]$ for group in leaders developers qa
+&gt;  do
+&gt;  oc adm groups new ${group}
+&gt;  done
+group.user.openshift.io/leaders created
+group.user.openshift.io/developers created
+group.user.openshift.io/qa created
+[student@workstation DO280-apps]$ oc adm groups add-users leaders leader
+group.user.openshift.io/leaders added: &quot;leader&quot;
+[student@workstation DO280-apps]$ oc adm groups add-users developers developer
+group.user.openshift.io/developers added: &quot;developer&quot;
+[student@workstation DO280-apps]$ oc adm groups add-users qa qa-engineer
+group.user.openshift.io/qa added: &quot;qa-engineer&quot;
+[student@workstation DO280-apps]$ oc adm policy add-cluster-role-to-group \
+&gt;     self-provisioner leaders
+clusterrole.rbac.authorization.k8s.io/self-provisioner added: &quot;leaders&quot;
+[student@workstation DO280-apps]$ oc adm policy remove-cluster-role-from-group \
+&gt;     self-provisioner system:authenticated:oauth
+Warning: Your changes may get lost whenever a master is restarted, unless you prevent reconciliation of this rolebinding using the following command: oc annotate clusterrolebinding.rbac self-provisioners &apos;rbac.authorization.kubernetes.io/autoupdate=false&apos; --overwrite
+clusterrole.rbac.authorization.k8s.io/self-provisioner removed: &quot;system:authenticated:oauth&quot;
+[student@workstation DO280-apps]$ oc policy add-role-to-group edit developers
+clusterrole.rbac.authorization.k8s.io/edit added: &quot;developers&quot;
+[student@workstation DO280-apps]$ oc policy add-role-to-group view qa
+clusterrole.rbac.authorization.k8s.io/view added: &quot;qa&quot;
+[student@workstation DO280-apps]$ oc get users
+NAME    UID                                    FULL NAME   IDENTITIES
+admin   01af9941-ce61-439a-aa68-d15061a6bdb1               cluster-users:admin
+[student@workstation DO280-apps]$ oc get groups
+NAME         USERS
+developers   developer
+leaders      leader
+qa           qa-engineer
+[student@workstation DO280-apps]$ oc get identities
+NAME                  IDP NAME        IDP USER NAME   USER NAME   USER UID
+cluster-users:admin   cluster-users   admin           admin       01af9941-ce61-439a-aa68-d15061a6bdb1
+[student@workstation DO280-apps]$ oc login -u developer -p redhat
+Login successful.
+
+You have one project on this server: &quot;review-troubleshoot&quot;
+
+Using project &quot;review-troubleshoot&quot;.
+[student@workstation DO280-apps]$ oc login -u qa-engineer -p redhat
+Login successful.
+
+You have one project on this server: &quot;review-troubleshoot&quot;
+
+Using project &quot;review-troubleshoot&quot;.
+[student@workstation DO280-apps]$ oc login -u leader -p redhat
+Login successful.
+
+You don&apos;t have any projects. You can try to create a new project, by running
+
+    oc new-project &lt;projectname&gt;
+
+[student@workstation DO280-apps]$ oc new-project test
+Now using project &quot;test&quot; on server &quot;https://api.ocp4.example.com:6443&quot;.
+
+You can add applications to this project with the &apos;new-app&apos; command. For example, try:
+
+    oc new-app rails-postgresql-example
+
+to build a new example application in Ruby. Or use kubectl to deploy a simple Kubernetes application:
+
+    kubectl create deployment hello-node --image=k8s.gcr.io/serve_hostname
+
+[student@workstation DO280-apps]$ oc delete project test 
+project.project.openshift.io &quot;test&quot; deleted
+[student@workstation DO280-apps]$ oc login -u qa-engineer -p redhat
+Login successful.
+
+You have one project on this server: &quot;review-troubleshoot&quot;
+
+Using project &quot;review-troubleshoot&quot;.
+[student@workstation DO280-apps]$ oc new-project test-qa
+Error from server (Forbidden): You may not request a new project via this API.
+[student@workstation DO280-apps]$ oc login -u developer -p redhat
+Login successful.
+
+You have one project on this server: &quot;review-troubleshoot&quot;
+
+Using project &quot;review-troubleshoot&quot;.
+[student@workstation DO280-apps]$ oc new-project test-qa
+Error from server (Forbidden): You may not request a new project via this API.
+[student@workstation DO280-apps]$ 
+</pre>
 
