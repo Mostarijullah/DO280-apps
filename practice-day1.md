@@ -563,3 +563,115 @@ The wordpress application also requires that the database WORDPRESS_DB_NAME exis
 Create a route for the application using any available hostname in the apps.ocp4.example.com subdomain. If you correctly deploy the application, then an installation wizard displays when you access the application from a browser.
 
 
+<pre>
+
+[student@workstation DO280-apps]$ oc new-app --name wordpress \
+&gt;     --docker-image quay.io/redhattraining/wordpress:5.7-php7.4-apache \
+&gt;     -e WORDPRESS_DB_HOST=mysql -e WORDPRESS_DB_NAME=wordpress \
+&gt;     -e WORDPRESS_DB_USER=root \
+&gt;     -e WORDPRESS_USER=wpuser -e WORDPRESS_PASSWORD=wppass \
+&gt;     -e WORDPRESS_TITLE=review-troubleshoot \
+&gt;     -e WORDPRESS_URL=wordpress.${RHT_OCP4_WILDCARD_DOMAIN} \
+&gt;     -e WORDPRESS_EMAIL=student@redhat.com
+--&gt; Found container image 4d3c70b (15 months old) from quay.io for &quot;quay.io/redhattraining/wordpress:5.7-php7.4-apache&quot;
+
+    * An image stream tag will be created as &quot;wordpress:5.7-php7.4-apache&quot; that will track this image
+
+--&gt; Creating resources ...
+    imagestream.image.openshift.io &quot;wordpress&quot; created
+    deployment.apps &quot;wordpress&quot; created
+    service &quot;wordpress&quot; created
+--&gt; Success
+    Application is not exposed. You can expose services to the outside world by executing one or more of the commands below:
+     &apos;oc expose service/wordpress&apos; 
+    Run &apos;oc status&apos; to view your app.
+[student@workstation DO280-apps]$ oc get all
+NAME                                    READY   STATUS              RESTARTS   AGE
+pod/hello-world-nginx-1-build           0/1     Completed           0          58m
+pod/hello-world-nginx-d58b5fc8b-csv6n   1/1     Running             0          56m
+pod/mysql-66c6b4976d-dbbwk              1/1     Running             0          9m39s
+pod/wordpress-d4956dc76-cclgj           0/1     ContainerCreating   0          8s
+
+NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/hello-world-nginx   ClusterIP   172.30.86.46     &lt;none&gt;        8080/TCP   58m
+service/mysql               ClusterIP   172.30.236.110   &lt;none&gt;        3306/TCP   12m
+service/wordpress           ClusterIP   172.30.87.138    &lt;none&gt;        80/TCP     15s
+
+NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/hello-world-nginx   1/1     1            1           58m
+deployment.apps/mysql               1/1     1            1           12m
+deployment.apps/wordpress           0/1     1            0           15s
+
+NAME                                          DESIRED   CURRENT   READY   AGE
+replicaset.apps/hello-world-nginx-874b97b6f   0         0         0       58m
+replicaset.apps/hello-world-nginx-d58b5fc8b   1         1         1       56m
+replicaset.apps/mysql-64d9f4d857              0         0         0       12m
+replicaset.apps/mysql-66c6b4976d              1         1         1       9m39s
+replicaset.apps/mysql-77c9c667d5              0         0         0       12m
+replicaset.apps/mysql-fbf67ff96               0         0         0       10m
+replicaset.apps/wordpress-594cbf6c55          1         0         0       15s
+replicaset.apps/wordpress-d4956dc76           1         1         0       8s
+
+NAME                                               TYPE     FROM   LATEST
+buildconfig.build.openshift.io/hello-world-nginx   Docker   Git    1
+
+NAME                                           TYPE     FROM          STATUS     STARTED          DURATION
+build.build.openshift.io/hello-world-nginx-1   Docker   Git@d0630df   Complete   58 minutes ago   1m14s
+
+NAME                                               IMAGE REPOSITORY                                                                         TAGS                UPDATED
+imagestream.image.openshift.io/hello-world-nginx   image-registry.openshift-image-registry.svc:5000/review-troubleshoot/hello-world-nginx   latest              56 minutes ago
+imagestream.image.openshift.io/mysql               image-registry.openshift-image-registry.svc:5000/review-troubleshoot/mysql               1-139               12 minutes ago
+imagestream.image.openshift.io/ubi8                image-registry.openshift-image-registry.svc:5000/review-troubleshoot/ubi8                8.0                 58 minutes ago
+imagestream.image.openshift.io/wordpress           image-registry.openshift-image-registry.svc:5000/review-troubleshoot/wordpress           5.7-php7.4-apache   8 seconds ago
+
+NAME                                         HOST/PORT                           PATH   SERVICES            PORT       TERMINATION   WILDCARD
+route.route.openshift.io/hello-world-nginx   hello-world.apps.ocp4.example.com          hello-world-nginx   8080-tcp                 None
+[student@workstation DO280-apps]$ oc get pods -l=wordpress
+No resources found in review-troubleshoot namespace.
+[student@workstation DO280-apps]$ oc get pods
+NAME                                READY   STATUS      RESTARTS   AGE
+hello-world-nginx-1-build           0/1     Completed   0          58m
+hello-world-nginx-d58b5fc8b-csv6n   1/1     Running     0          57m
+mysql-66c6b4976d-dbbwk              1/1     Running     0          10m
+wordpress-d4956dc76-cclgj           0/1     Error       2          46s
+[student@workstation DO280-apps]$ oc set env deployment/wordpress \
+&gt;    --prefix WORDPRESS_DB_ --from secret/mysql
+deployment.apps/wordpress updated
+[student@workstation DO280-apps]$ oc create serviceaccount wordpress-sa
+serviceaccount/wordpress-sa created
+[student@workstation DO280-apps]$ oc whoami
+developer
+[student@workstation DO280-apps]$ oc login -u admin -p redhat
+Login successful.
+
+You have access to 60 projects, the list has been suppressed. You can list all projects with &apos; projects&apos;
+
+Using project &quot;review-troubleshoot&quot;.
+[student@workstation DO280-apps]$ oc adm policy add-scc-to-user anyuid -z wordpress-sa
+clusterrole.rbac.authorization.k8s.io/system:openshift:scc:anyuid added: &quot;wordpress-sa&quot;
+[student@workstation DO280-apps]$ oc login -u developer -p redhat
+Login successful.
+
+You have one project on this server: &quot;review-troubleshoot&quot;
+
+Using project &quot;review-troubleshoot&quot;.
+[student@workstation DO280-apps]$ oc set serviceaccount deployment/wordpress \
+&gt;     wordpress-sa
+deployment.apps/wordpress serviceaccount updated
+[student@workstation DO280-apps]$ oc get pods
+NAME                                READY   STATUS      RESTARTS   AGE
+hello-world-nginx-1-build           0/1     Completed   0          61m
+hello-world-nginx-d58b5fc8b-csv6n   1/1     Running     0          60m
+mysql-66c6b4976d-dbbwk              1/1     Running     0          12m
+wordpress-689f4f5c49-zvxb2          1/1     Running     0          10s
+[student@workstation DO280-apps]$ oc get pods -l deployment=mysql
+NAME                     READY   STATUS    RESTARTS   AGE
+mysql-66c6b4976d-dbbwk   1/1     Running   0          13m
+[student@workstation DO280-apps]$ oc exec mysql-66c6b4976d-dbbwk -- \
+&gt; /usr/bin/mysql -uroot -e &quot;CREATE DATABASE wordpress&quot;
+[student@workstation DO280-apps]$ oc expose service wordpress \
+&gt;    --hostname wordpress.apps.ocp4.example.com
+route.route.openshift.io/wordpress exposed
+[student@workstation DO280-apps]$ 
+</pre>
+
