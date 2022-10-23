@@ -658,3 +658,283 @@ route.route.openshift.io/wordpress exposed
 [student@workstation DO280-apps]$ 
 </pre>
 
+
+
+
+Task 6 :
+
+
+As the developer user, deploy the famous-quotes application in the review-troubleshoot project using the ~/DO280/labs/review-troubleshoot/deploy_famous-quotes.sh script. This script creates the defaultdb database and the resources defined in the ~/DO280/labs/review-troubleshoot/famous-quotes.yaml file.
+
+Use the mysql secret to initialize environment variables for the famous-quotes deployment with the prefix QUOTES_.
+
+The application pods do not initially deploy after you execute the script. The famous-quotes deployment specifies a node selector, and there are no cluster nodes with a matching node label.
+
+Remove the node selector from the deployment, which enables OpenShift to schedule application pods on any available node.
+
+Create a route for the famous-quotes application using any available hostname in the apps.ocp4.example.com subdomain, and then verify that the application responds to external requests.
+
+
+<pre> 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ 
+[student@workstation DO280-apps]$ oc whoami
+developer
+[student@workstation DO280-apps]$ oc project
+Using project &quot;review-troubleshoot&quot; on server &quot;https://api.ocp4.example.com:6443&quot;.
+[student@workstation DO280-apps]$  ~/DO280/labs/review-troubleshoot/
+bash: /home/student/DO280/labs/review-troubleshoot/: Is a directory
+[student@workstation DO280-apps]$ cd  ~/DO280/labs/review-troubleshoot/
+[student@workstation review-troubleshoot]$ ls
+<font color="#00D700">deploy_famous-quotes.sh</font>  famous-quotes.yaml
+[student@workstation review-troubleshoot]$ ./deploy_famous-quotes.sh 
+Creating famous-quotes database
+Deploying famous-quotes application
+deployment.apps/famous-quotes created
+service/famous-quotes created
+[student@workstation review-troubleshoot]$ cat famous-quotes.yaml 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: famous-quotes
+  name: famous-quotes
+  namespace: review-troubleshoot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: famous-quotes
+      deployment: famous-quotes
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+      creationTimestamp: null
+      labels:
+        app: famous-quotes
+        deployment: famous-quotes
+    spec:
+      nodeSelector:
+        env: quotes
+      containers:
+      - env:
+        - name: QUOTES_DATABASE
+          value: defaultdb
+        - name: QUOTES_HOSTNAME
+          value: mysql
+        - name: QUOTES_USER
+          value: root
+        - name: QUOTES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: mysql
+        image: quay.io/redhattraining/famous-quotes:2.1
+        imagePullPolicy: IfNotPresent
+        name: famous-quotes
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  labels:
+    app: famous-quotes
+  name: famous-quotes
+  namespace: review-troubleshoot
+spec:
+  ports:
+  - name: 8000-tcp
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: famous-quotes
+    deployment: famous-quotes
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+[student@workstation review-troubleshoot]$ oc set env deployment famous-quotes \
+&gt;    --prefix QUOTES_ --from secret/mysql
+deployment.apps/famous-quotes updated
+[student@workstation review-troubleshoot]$ oc get pods
+NAME                                READY   STATUS      RESTARTS   AGE
+famous-quotes-57b4b94d6d-85ms2      0/1     Pending     0          108s
+hello-world-nginx-1-build           0/1     Completed   0          82m
+hello-world-nginx-d58b5fc8b-csv6n   1/1     Running     0          80m
+mysql-66c6b4976d-dbbwk              1/1     Running     0          33m
+wordpress-689f4f5c49-zvxb2          1/1     Running     0          20m
+[student@workstation review-troubleshoot]$ oc get events --sort-by=&apos;{.lastTimestamp}&apos;
+LAST SEEN   TYPE      REASON                         OBJECT                                   MESSAGE
+33m         Normal    Scheduled                      pod/mysql-66c6b4976d-dbbwk               Successfully assigned review-troubleshoot/mysql-66c6b4976d-dbbwk to master01
+52s         Warning   FailedScheduling               pod/famous-quotes-57b4b94d6d-85ms2       0/3 nodes are available: 3 node(s) didn&apos;t match node selector.
+24m         Normal    Scheduled                      pod/wordpress-d4956dc76-cclgj            Successfully assigned review-troubleshoot/wordpress-d4956dc76-cclgj to master01
+21m         Normal    Scheduled                      pod/wordpress-689f4f5c49-zvxb2           Successfully assigned review-troubleshoot/wordpress-689f4f5c49-zvxb2 to master01
+82m         Normal    Scheduled                      pod/hello-world-nginx-1-build            Successfully assigned review-troubleshoot/hello-world-nginx-1-build to master03
+36m         Normal    Scheduled                      pod/mysql-64d9f4d857-4vb9p               Successfully assigned review-troubleshoot/mysql-64d9f4d857-4vb9p to master01
+23m         Normal    Scheduled                      pod/wordpress-57d5c8fdf-c5gwq            Successfully assigned review-troubleshoot/wordpress-57d5c8fdf-c5gwq to master01
+34m         Normal    Scheduled                      pod/mysql-fbf67ff96-q8pzj                Successfully assigned review-troubleshoot/mysql-fbf67ff96-q8pzj to master01
+33m         Warning   FailedScheduling               pod/mysql-66c6b4976d-dbbwk               0/3 nodes are available: 3 pod has unbound immediate PersistentVolumeClaims.
+33m         Warning   FailedScheduling               pod/mysql-66c6b4976d-dbbwk               0/3 nodes are available: 3 pod has unbound immediate PersistentVolumeClaims.
+81m         Normal    Scheduled                      pod/hello-world-nginx-d58b5fc8b-csv6n    Successfully assigned review-troubleshoot/hello-world-nginx-d58b5fc8b-csv6n to master03
+2m9s        Warning   FailedScheduling               pod/famous-quotes-57b4b94d6d-85ms2       0/3 nodes are available: 3 node(s) didn&apos;t match node selector.
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-p6x5h&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-7j52v&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-wrmt4&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-7thq7&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-7vvqc&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-4xjh2&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-tn4dl&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-wt76x&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Normal    ScalingReplicaSet              deployment/hello-world-nginx             Scaled up replica set hello-world-nginx-874b97b6f to 1
+82m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   Error creating: Pod &quot;hello-world-nginx-874b97b6f-c7r96&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+82m         Warning   BuildConfigInstantiateFailed   buildconfig/hello-world-nginx            error instantiating Build from BuildConfig review-troubleshoot/hello-world-nginx (0): Error resolving ImageStreamTag ubi8:8.0 in namespace review-troubleshoot: unable to find latest tagged image
+82m         Warning   BuildConfigTriggerFailed       buildconfig/hello-world-nginx            error triggering Build for BuildConfig review-troubleshoot/hello-world-nginx: Internal error occurred: build config review-troubleshoot/hello-world-nginx has already instantiated a build for imageid registry.access.redhat.com/ubi8@sha256:8275e2ad7f458e329bdc8c0e7543cff1729998fe515a281d49638246de8e39ee
+82m         Normal    TaintManagerEviction           pod/hello-world-nginx-1-build            Cancelling deletion of Pod review-troubleshoot/hello-world-nginx-1-build
+82m         Normal    AddedInterface                 pod/hello-world-nginx-1-build            Add eth0 [10.10.0.8/23]
+82m         Normal    Pulled                         pod/hello-world-nginx-1-build            Container image &quot;quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a261653285dfb996fef425335d85a0b324af3ce88689e21dd7d3905e57b7c020&quot; already present on machine
+82m         Normal    Started                        pod/hello-world-nginx-1-build            Started container git-clone
+82m         Normal    Created                        pod/hello-world-nginx-1-build            Created container git-clone
+82m         Normal    BuildStarted                   build/hello-world-nginx-1                Build review-troubleshoot/hello-world-nginx-1 is now running
+82m         Normal    Pulled                         pod/hello-world-nginx-1-build            Container image &quot;quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a261653285dfb996fef425335d85a0b324af3ce88689e21dd7d3905e57b7c020&quot; already present on machine
+82m         Normal    Created                        pod/hello-world-nginx-1-build            Created container manage-dockerfile
+82m         Normal    Started                        pod/hello-world-nginx-1-build            Started container manage-dockerfile
+81m         Normal    Pulled                         pod/hello-world-nginx-1-build            Container image &quot;quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a261653285dfb996fef425335d85a0b324af3ce88689e21dd7d3905e57b7c020&quot; already present on machine
+81m         Normal    Started                        pod/hello-world-nginx-1-build            Started container docker-build
+81m         Normal    Created                        pod/hello-world-nginx-1-build            Created container docker-build
+81m         Warning   FailedCreate                   replicaset/hello-world-nginx-874b97b6f   (combined from similar events): Error creating: Pod &quot;hello-world-nginx-874b97b6f-rn9l4&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+81m         Normal    SuccessfulCreate               replicaset/hello-world-nginx-d58b5fc8b   Created pod: hello-world-nginx-d58b5fc8b-csv6n
+81m         Normal    ScalingReplicaSet              deployment/hello-world-nginx             Scaled up replica set hello-world-nginx-d58b5fc8b to 1
+81m         Normal    BuildCompleted                 build/hello-world-nginx-1                Build review-troubleshoot/hello-world-nginx-1 completed successfully
+81m         Normal    AddedInterface                 pod/hello-world-nginx-d58b5fc8b-csv6n    Add eth0 [10.10.0.41/23]
+81m         Normal    Pulling                        pod/hello-world-nginx-d58b5fc8b-csv6n    Pulling image &quot;image-registry.openshift-image-registry.svc:5000/review-troubleshoot/hello-world-nginx@sha256:62005c42b4d5c722e33cbe513cf711f9b866e26c8c2e3326b84939fb884cd06c&quot;
+81m         Normal    Pulled                         pod/hello-world-nginx-d58b5fc8b-csv6n    Successfully pulled image &quot;image-registry.openshift-image-registry.svc:5000/review-troubleshoot/hello-world-nginx@sha256:62005c42b4d5c722e33cbe513cf711f9b866e26c8c2e3326b84939fb884cd06c&quot; in 7.053680011s
+81m         Normal    Created                        pod/hello-world-nginx-d58b5fc8b-csv6n    Created container hello-world-nginx
+81m         Normal    Started                        pod/hello-world-nginx-d58b5fc8b-csv6n    Started container hello-world-nginx
+81m         Normal    ScalingReplicaSet              deployment/hello-world-nginx             Scaled down replica set hello-world-nginx-874b97b6f to 0
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-7wk7z&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-lmv6z&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-g268p&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-26kv5&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Normal    ScalingReplicaSet              deployment/mysql                         Scaled up replica set mysql-77c9c667d5 to 1
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-jfgxl&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-45ltf&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-n7r6h&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-w9w2x&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              Error creating: Pod &quot;mysql-77c9c667d5-hs2qm&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+36m         Normal    ScalingReplicaSet              deployment/mysql                         Scaled up replica set mysql-64d9f4d857 to 1
+36m         Normal    SuccessfulCreate               replicaset/mysql-64d9f4d857              Created pod: mysql-64d9f4d857-4vb9p
+36m         Normal    AddedInterface                 pod/mysql-64d9f4d857-4vb9p               Add eth0 [10.8.0.17/23]
+36m         Normal    Pulling                        pod/mysql-64d9f4d857-4vb9p               Pulling image &quot;registry.redhat.io/rhel8/mysql-80@sha256:1c65c90a5ffc40d0454d27e6c8a13b7a746a08ea151ed24edce96c61aeb28801&quot;
+36m         Normal    Pulled                         pod/mysql-64d9f4d857-4vb9p               Successfully pulled image &quot;registry.redhat.io/rhel8/mysql-80@sha256:1c65c90a5ffc40d0454d27e6c8a13b7a746a08ea151ed24edce96c61aeb28801&quot; in 12.080821569s
+35m         Warning   FailedCreate                   replicaset/mysql-77c9c667d5              (combined from similar events): Error creating: Pod &quot;mysql-77c9c667d5-l5jxm&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+35m         Warning   BackOff                        pod/mysql-64d9f4d857-4vb9p               Back-off restarting failed container
+34m         Normal    ScalingReplicaSet              deployment/mysql                         Scaled up replica set mysql-fbf67ff96 to 1
+34m         Normal    SuccessfulCreate               replicaset/mysql-fbf67ff96               Created pod: mysql-fbf67ff96-q8pzj
+34m         Normal    ScalingReplicaSet              deployment/mysql                         Scaled down replica set mysql-77c9c667d5 to 0
+34m         Normal    AddedInterface                 pod/mysql-fbf67ff96-q8pzj                Add eth0 [10.8.0.19/23]
+34m         Normal    ScalingReplicaSet              deployment/mysql                         Scaled down replica set mysql-64d9f4d857 to 0
+34m         Normal    Created                        pod/mysql-64d9f4d857-4vb9p               Created container mysql
+34m         Normal    SuccessfulDelete               replicaset/mysql-64d9f4d857              Deleted pod: mysql-64d9f4d857-4vb9p
+34m         Normal    Pulled                         pod/mysql-fbf67ff96-q8pzj                Container image &quot;registry.redhat.io/rhel8/mysql-80@sha256:1c65c90a5ffc40d0454d27e6c8a13b7a746a08ea151ed24edce96c61aeb28801&quot; already present on machine
+34m         Normal    Created                        pod/mysql-fbf67ff96-q8pzj                Created container mysql
+34m         Normal    Pulled                         pod/mysql-64d9f4d857-4vb9p               Container image &quot;registry.redhat.io/rhel8/mysql-80@sha256:1c65c90a5ffc40d0454d27e6c8a13b7a746a08ea151ed24edce96c61aeb28801&quot; already present on machine
+34m         Normal    Started                        pod/mysql-fbf67ff96-q8pzj                Started container mysql
+34m         Normal    Started                        pod/mysql-64d9f4d857-4vb9p               Started container mysql
+33m         Normal    Provisioning                   persistentvolumeclaim/pvc-qwgrj          External provisioner is provisioning volume for claim &quot;review-troubleshoot/pvc-qwgrj&quot;
+33m         Normal    ExternalProvisioning           persistentvolumeclaim/pvc-qwgrj          waiting for a volume to be created, either by external provisioner &quot;nfs-storage-provisioner&quot; or manually created by system administrator
+33m         Normal    ScalingReplicaSet              deployment/mysql                         Scaled up replica set mysql-66c6b4976d to 1
+33m         Normal    ProvisioningSucceeded          persistentvolumeclaim/pvc-qwgrj          Successfully provisioned volume pvc-f1fb064f-6d75-4d8a-813a-fe9f1797b9a3
+33m         Normal    SuccessfulCreate               replicaset/mysql-66c6b4976d              Created pod: mysql-66c6b4976d-dbbwk
+33m         Normal    Created                        pod/mysql-66c6b4976d-dbbwk               Created container mysql
+33m         Normal    Pulled                         pod/mysql-66c6b4976d-dbbwk               Container image &quot;registry.redhat.io/rhel8/mysql-80@sha256:1c65c90a5ffc40d0454d27e6c8a13b7a746a08ea151ed24edce96c61aeb28801&quot; already present on machine
+33m         Normal    AddedInterface                 pod/mysql-66c6b4976d-dbbwk               Add eth0 [10.8.0.20/23]
+33m         Normal    Started                        pod/mysql-66c6b4976d-dbbwk               Started container mysql
+33m         Normal    ScalingReplicaSet              deployment/mysql                         Scaled down replica set mysql-fbf67ff96 to 0
+33m         Normal    Killing                        pod/mysql-fbf67ff96-q8pzj                Stopping container mysql
+33m         Normal    SuccessfulDelete               replicaset/mysql-fbf67ff96               Deleted pod: mysql-fbf67ff96-q8pzj
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-wgk5t&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-g2j6p&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-6w5jw&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Normal    ScalingReplicaSet              deployment/wordpress                     Scaled up replica set wordpress-594cbf6c55 to 1
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-pxln9&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-8nhgt&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-c6s6v&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-2kspj&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-8msgf&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          Error creating: Pod &quot;wordpress-594cbf6c55-dh85g&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Normal    SuccessfulCreate               replicaset/wordpress-d4956dc76           Created pod: wordpress-d4956dc76-cclgj
+24m         Normal    ScalingReplicaSet              deployment/wordpress                     Scaled up replica set wordpress-d4956dc76 to 1
+24m         Normal    Pulling                        pod/wordpress-d4956dc76-cclgj            Pulling image &quot;quay.io/redhattraining/wordpress@sha256:0cf952b01efd71e94c82c7e4d1c4d4daf9276fb60a9696b2113a9f701c1ecc6b&quot;
+24m         Normal    AddedInterface                 pod/wordpress-d4956dc76-cclgj            Add eth0 [10.8.0.21/23]
+24m         Warning   FailedCreate                   replicaset/wordpress-594cbf6c55          (combined from similar events): Error creating: Pod &quot;wordpress-594cbf6c55-xxgbp&quot; is invalid: spec.containers[0].image: Invalid value: &quot; &quot;: must not have leading or trailing whitespace
+24m         Normal    Pulled                         pod/wordpress-d4956dc76-cclgj            Successfully pulled image &quot;quay.io/redhattraining/wordpress@sha256:0cf952b01efd71e94c82c7e4d1c4d4daf9276fb60a9696b2113a9f701c1ecc6b&quot; in 22.952558677s
+24m         Normal    ScalingReplicaSet              deployment/wordpress                     Scaled down replica set wordpress-594cbf6c55 to 0
+23m         Normal    Pulled                         pod/wordpress-d4956dc76-cclgj            Container image &quot;quay.io/redhattraining/wordpress@sha256:0cf952b01efd71e94c82c7e4d1c4d4daf9276fb60a9696b2113a9f701c1ecc6b&quot; already present on machine
+23m         Normal    Started                        pod/wordpress-d4956dc76-cclgj            Started container wordpress
+23m         Normal    Created                        pod/wordpress-d4956dc76-cclgj            Created container wordpress
+23m         Normal    ScalingReplicaSet              deployment/wordpress                     Scaled up replica set wordpress-57d5c8fdf to 1
+23m         Normal    SuccessfulCreate               replicaset/wordpress-57d5c8fdf           Created pod: wordpress-57d5c8fdf-c5gwq
+23m         Normal    AddedInterface                 pod/wordpress-57d5c8fdf-c5gwq            Add eth0 [10.8.0.23/23]
+23m         Normal    SuccessfulDelete               replicaset/wordpress-d4956dc76           Deleted pod: wordpress-d4956dc76-cclgj
+23m         Warning   BackOff                        pod/wordpress-d4956dc76-cclgj            Back-off restarting failed container
+23m         Normal    ScalingReplicaSet              deployment/wordpress                     Scaled down replica set wordpress-d4956dc76 to 0
+21m         Normal    Started                        pod/wordpress-57d5c8fdf-c5gwq            Started container wordpress
+21m         Normal    Created                        pod/wordpress-57d5c8fdf-c5gwq            Created container wordpress
+21m         Normal    Pulled                         pod/wordpress-57d5c8fdf-c5gwq            Container image &quot;quay.io/redhattraining/wordpress@sha256:0cf952b01efd71e94c82c7e4d1c4d4daf9276fb60a9696b2113a9f701c1ecc6b&quot; already present on machine
+21m         Warning   BackOff                        pod/wordpress-57d5c8fdf-c5gwq            Back-off restarting failed container
+21m         Normal    ScalingReplicaSet              deployment/wordpress                     Scaled up replica set wordpress-689f4f5c49 to 1
+21m         Normal    SuccessfulCreate               replicaset/wordpress-689f4f5c49          Created pod: wordpress-689f4f5c49-zvxb2
+21m         Normal    Started                        pod/wordpress-689f4f5c49-zvxb2           Started container wordpress
+21m         Normal    Pulled                         pod/wordpress-689f4f5c49-zvxb2           Container image &quot;quay.io/redhattraining/wordpress@sha256:0cf952b01efd71e94c82c7e4d1c4d4daf9276fb60a9696b2113a9f701c1ecc6b&quot; already present on machine
+21m         Normal    AddedInterface                 pod/wordpress-689f4f5c49-zvxb2           Add eth0 [10.8.0.24/23]
+21m         Normal    Created                        pod/wordpress-689f4f5c49-zvxb2           Created container wordpress
+21m         Normal    SuccessfulDelete               replicaset/wordpress-57d5c8fdf           Deleted pod: wordpress-57d5c8fdf-c5gwq
+21m         Normal    ScalingReplicaSet              deployment/wordpress                     Scaled down replica set wordpress-57d5c8fdf to 0
+2m10s       Normal    SuccessfulCreate               replicaset/famous-quotes-57b4b94d6d      Created pod: famous-quotes-57b4b94d6d-85ms2
+2m10s       Normal    ScalingReplicaSet              deployment/famous-quotes                 Scaled up replica set famous-quotes-57b4b94d6d to 1
+[student@workstation review-troubleshoot]$ oc get deployment/famous-quotes \
+&gt;    -o yaml &gt; /tmp/famous-deploy.yaml
+[student@workstation review-troubleshoot]$ vi /tmp/famous-deploy.yaml 
+[student@workstation review-troubleshoot]$ oc replace -f /tmp/famous-deploy.yaml 
+deployment.apps/famous-quotes replaced
+[student@workstation review-troubleshoot]$ oc get pods -l app=famous-quotes
+NAME                             READY   STATUS    RESTARTS   AGE
+famous-quotes-77868657d9-wb2qv   1/1     Running   0          53s
+[student@workstation review-troubleshoot]$ oc expose service famous-quotes \
+&gt;    --hostname quotes.apps.ocp4.example.com
+route.route.openshift.io/famous-quotes exposed
+[student@workstation review-troubleshoot]$ curl -s http://quotes.apps.ocp4.example.com \
+&gt;    | grep Quote
+        &lt;title&gt;<font color="#EF2929"><b>Quote</b></font>s&lt;/title&gt;
+        &lt;h1&gt;<font color="#EF2929"><b>Quote</b></font> List&lt;/h1&gt;
+[student@workstation review-troubleshoot]$ 
+</pre>
