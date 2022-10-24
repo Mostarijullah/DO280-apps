@@ -343,6 +343,37 @@ hello-secure-5c57bbf467-t9nm9   1/1     Running   0          27s
 [student@workstation review-template]$ 
 </pre>
 
-![image](https://user-images.githubusercontent.com/88080851/197458736-b168a742-55a4-47fb-83cf-a27454056b3c.png)
+
+New Mock Tasks
+-----------------------------------------
+![image](https://user-images.githubusercontent.com/88080851/197459112-5374cd59-7273-40a5-9921-1533e9af2d1c.png)
+
+
+![image](https://user-images.githubusercontent.com/88080851/197459224-b8186457-8870-4b54-a17d-86ffff5c40fa.png)
+
+
+![image](https://user-images.githubusercontent.com/88080851/197459273-4f8fea34-89ef-4479-b935-96897a5ef467.png)
+
+
+![image](https://user-images.githubusercontent.com/88080851/197459364-ae3d18a2-2b63-43da-a9ae-79a71e58d157.png)
+![image](https://user-images.githubusercontent.com/88080851/197459402-251800c1-4943-416c-842e-3be7f679df23.png)
+
+
+
+![image](https://user-images.githubusercontent.com/88080851/197459452-2b043d45-2242-47cf-8e97-02d0c69dde02.png)
+
+
+![image](https://user-images.githubusercontent.com/88080851/197459528-d18d299e-de1f-46cc-a8ff-f292ef646993.png)
+
+
+![image](https://user-images.githubusercontent.com/88080851/197459578-3740e50f-b3db-4f76-a702-73ad5bc513eb.png)
+
+
+![image](https://user-images.githubusercontent.com/88080851/197459620-6b5e8081-4f0b-4eb7-9e28-289c5217476b.png)
+
+
+![image](https://user-images.githubusercontent.com/88080851/197459751-b1ba8ced-bc36-4088-aa50-58635d8d2788.png)
+
+
 
 
