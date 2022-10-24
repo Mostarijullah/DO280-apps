@@ -244,4 +244,101 @@ Task 11 :
 As the developer user, configure the hello-secure deployment to scale automatically. The deployment must have at least one pod running. If the average CPU utilization exceeds 80%, then the deployment scales to a maximum of five pods.
 
 
+<pre>            HPA_READY=&quot;true&quot;
+            echo &quot;READY&quot;
+            echo &quot;============================================================&quot;
+            echo
+            break
+          else
+            sleep 5
+            ((HPA_LOOP_COUNT=HPA_LOOP_COUNT+1))
+          fi
+        done
 
+        if [ ${HPA_LOOP_COUNT} -eq ${HPA_LOOP_LIMIT} ]
+        then
+          echo &quot;NOT READY&quot;
+          echo &quot;============================================================&quot;
+        fi
+      else
+        HPA_READY=&quot;true&quot;
+      fi
+
+      if [ &quot;${HPA_READY}&quot; == &quot;true&quot; ]
+      then
+        echo
+        ab -c200 -k -dS -n100000 https://${HOSTNAME}/index.html
+      fi
+    else
+      echo
+      echo &quot;ERROR: &apos;${POD}&apos; did not make a CPU request.&quot; 1&gt;&amp;2
+      echo
+    fi
+  fi
+fi
+
+[student@workstation review-template]$ clear
+
+[student@workstation review-template]$ oc get pods
+NAME                            READY   STATUS    RESTARTS   AGE
+hello-secure-5c57bbf467-m6lng   1/1     Running   0          22m
+[student@workstation review-template]$  oc autoscale deployment/hello-secure \
+&gt;     --min 1 --max 5 --cpu-percent 80
+horizontalpodautoscaler.autoscaling/hello-secure autoscaled
+[student@workstation review-template]$ ./test-hpa.sh 
+
+This is ApacheBench, Version 2.3 &lt;$Revision: 1843412 $&gt;
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking hello-secure.apps.ocp4.example.com (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.14.1
+Server Hostname:        hello-secure.apps.ocp4.example.com
+Server Port:            443
+SSL/TLS Protocol:       TLSv1.2,ECDHE-RSA-AES256-GCM-SHA384,4096,256
+Server Temp Key:        X25519 253 bits
+TLS Server Name:        hello-secure.apps.ocp4.example.com
+
+Document Path:          /index.html
+Document Length:        72 bytes
+
+Concurrency Level:      200
+Time taken for tests:   73.827 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99080
+Total transferred:      30795400 bytes
+HTML transferred:       7200000 bytes
+Requests per second:    1354.51 [#/sec] (mean)
+Time per request:       147.655 [ms] (mean)
+Time per request:       0.738 [ms] (mean, across all concurrent requests)
+Transfer rate:          407.35 [Kbytes/sec] received
+
+Connection Times (ms)
+              min   avg   max
+Connect:        0    2811018
+Processing:     0   120 1499
+Waiting:        0   120 1499
+Total:          0   14711321
+[student@workstation review-template]$ oc get pods
+NAME                            READY   STATUS    RESTARTS   AGE
+hello-secure-5c57bbf467-2svwf   1/1     Running   0          42s
+hello-secure-5c57bbf467-fnbhs   1/1     Running   0          42s
+hello-secure-5c57bbf467-g48gr   1/1     Running   0          42s
+hello-secure-5c57bbf467-m6lng   1/1     Running   0          24m
+hello-secure-5c57bbf467-t9nm9   1/1     Running   0          27s
+[student@workstation review-template]$ 
+</pre>
