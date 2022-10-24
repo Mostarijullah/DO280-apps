@@ -342,3 +342,7 @@ hello-secure-5c57bbf467-m6lng   1/1     Running   0          24m
 hello-secure-5c57bbf467-t9nm9   1/1     Running   0          27s
 [student@workstation review-template]$ 
 </pre>
+
+![image](https://user-images.githubusercontent.com/88080851/197458736-b168a742-55a4-47fb-83cf-a27454056b3c.png)
+
+
